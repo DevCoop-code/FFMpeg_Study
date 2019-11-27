@@ -86,5 +86,30 @@ int main(int argc, const char * argv[]) {
     if(avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
         return -1;  //Could not open codec
     
+    
+    /*
+     Storing the Data
+     */
+    AVFrame *pFrame = NULL;
+    AVFrame *pFrameRGB = NULL;
+    
+    //Allocate video frame
+    pFrame = av_frame_alloc();
+    //Allocate an AVFrame structure
+    pFrameRGB = av_frame_alloc();
+    if(pFrameRGB == NULL)
+        return -1;
+    //Even though we've allocated the frame, still need a place to put the raw data when convert it
+    uint8_t *buffer = NULL;
+    int numBytes;
+    //Determine required buffer size and allocate buffer
+    numBytes = avpicture_get_size(AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height);
+    buffer = (uint8_t *)av_malloc(numBytes*sizeof(uint8_t));
+    
+    /*
+     Assign appropriate parts of buffer to image planes in pFrameRGB
+    */
+     //Note that pFrameRGB is an AVFrame but AVFrame is a superset of AVPicture
+    avpicture_fill((AVPicture *)pFrameRGB, buffer, AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height);
     return 0;
 }
