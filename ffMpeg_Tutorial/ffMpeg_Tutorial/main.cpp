@@ -28,7 +28,7 @@ int main(int argc, const char * argv[]) {
      Read File Header
      */
     //Reads file header and Stores information about the file format in the AVFormatContext
-    if(avformat_open_input(&pFormatCtx, argv[1], NULL, 0) != 0)
+    if(avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0)
     {
         return -1;  //Couldn't open file
     }
@@ -65,10 +65,10 @@ int main(int argc, const char * argv[]) {
         return -1;
     
     //Get a pointer to the codec context for the video stream
-    pCodecCtx = pFormatCtx->streams[videoStream]->codec;
+    pCodecCtxOrig = pFormatCtx->streams[videoStream]->codec;
     AVCodec *pCodec = NULL;
     //Find the decoder for the video stream
-    pCodec = avcodec_find_decoder(pCodecCtx->codec_id);
+    pCodec = avcodec_find_decoder(pCodecCtxOrig->codec_id);
     if(pCodec == NULL)
     {
         fprintf(stderr, "Unsupported codec! \n");
