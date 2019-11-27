@@ -1,3 +1,7 @@
 ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libavcodec.a
 ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libavformat.a
 ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libavutil.a
+ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libavdevice.a
+ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libavfilter.a
+ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libswresample.a
+ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libswscale.a
