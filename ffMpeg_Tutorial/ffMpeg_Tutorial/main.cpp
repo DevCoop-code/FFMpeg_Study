@@ -17,13 +17,38 @@ extern "C" {
 #include "libavcodec/avcodec.h"
 #include "libswscale/swscale.h"
 }
+void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame)
+{
+    FILE *pFile;
+    char szFilename[32];
+    int y;
+    
+    //Open file
+    sprintf(szFilename, "frame%d.ppm", iFrame);
+    pFile = fopen(szFilename, "wb");
+    if(pFile == NULL)
+        return;
+    
+    //Write header
+    fprintf(pFile, "P6\n%d %d\n255\n", width, height);
+    
+    //Write pixel data
+    for(int y=0; y<height; y++)
+    {
+        fwrite(pFrame->data[0]+y*pFrame->linesize[0], 1, width*3, pFile);
+    }
+    
+    //Close file
+    fclose(pFile);
+}
 
 int main(int argc, const char * argv[]) {
     //Registers all available file formats and codecs with the library
     av_register_all();
-    
+
     //Open the file
     AVFormatContext *pFormatCtx = NULL;
+    
     /*
      Read File Header
      */
@@ -154,7 +179,7 @@ int main(int argc, const char * argv[]) {
                 //Save the frame to disk
                 if(++i <= 5)
                 {
-                    //SaveFrame
+                    SaveFrame(pFrameRGB, pCodecCtx->width, pCodecCtx->height, i);
                 }
             }
         }
