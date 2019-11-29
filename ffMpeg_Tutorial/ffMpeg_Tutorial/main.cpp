@@ -111,5 +111,56 @@ int main(int argc, const char * argv[]) {
     */
      //Note that pFrameRGB is an AVFrame but AVFrame is a superset of AVPicture
     avpicture_fill((AVPicture *)pFrameRGB, buffer, AV_PIX_FMT_RGB24, pCodecCtx->width, pCodecCtx->height);
+    
+    /*
+     Read through the entire video stream by reading in the packet, decoding it into our frame and once our frame is complete, will convert and save it
+     */
+    struct SwsContext *sws_ctx = NULL;
+    int frameFinished;
+    
+    AVPacket packet;
+    //Initialize SWS context for software scaling
+    sws_ctx = sws_getContext(pCodecCtx->width,
+                             pCodecCtx->height,
+                             pCodecCtx->pix_fmt,
+                             pCodecCtx->width,
+                             pCodecCtx->height,
+                             AV_PIX_FMT_RGB24,
+                             SWS_BILINEAR,
+                             NULL,
+                             NULL,
+                             NULL);
+    int i=0;
+    while (av_read_frame(pFormatCtx, &packet) >= 0)
+    {
+        //Is this a packet from the video stream?
+        if(packet.stream_index == videoStream)
+        {
+            //Decode video frame
+            avcodec_decode_video2(pCodecCtx, pFrame, &frameFinished, &packet);
+            
+            //Did we get a video frame?
+            if(frameFinished)
+            {
+                //Convert the image from its native format(pCodecCtx->pix_fmt) to RGB
+                sws_scale(sws_ctx,
+                          (uint8_t const * const *)pFrame->data,
+                          pFrame->linesize,
+                          0,
+                          pCodecCtx->height,
+                          pFrameRGB->data,
+                          pFrameRGB->linesize);
+                
+                //Save the frame to disk
+                if(++i <= 5)
+                {
+                    //SaveFrame
+                }
+            }
+        }
+        
+        //Free the packet that was allocated by av_read_frame
+        av_free_packet(&packet);
+    }
     return 0;
 }
