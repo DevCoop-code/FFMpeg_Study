@@ -2,10 +2,10 @@
 # http://www.gnu.org/software/make/manual/make.html
 #
 CC:=gcc
-INCLUDES:=$(shell pkg-config --cflags libavformat libavcodec libswresample libswscale libavutil sdl)
+INCLUDES:=$(shell pkg-config --cflags libavformat libavcodec libswresample libswscale libavutil sdl2)
 CFLAGS:=-Wall -ggdb
-LDFLAGS:=$(shell pkg-config --libs libavformat libavcodec libswresample libswscale libavutil sdl) -lm
-EXE:=main1.out
+LDFLAGS:=$(shell pkg-config --libs libavformat libavcodec libswresample libswscale libavutil sdl2) -lm
+EXE:=main1.out main2.out
 
 #
 # This is here to prevent Make from deleting secondary files.

@@ -6,18 +6,14 @@
 //  Copyright © 2019 HanGyoJeong. All rights reserved.
 //
 
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libswscale/swscale.h>
+
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_thread.h>
-#include <stdio.h>
-#include <iostream>
-#include <CoreFoundation/CoreFoundation.h>
-#include <AudioToolbox/AudioToolbox.h>
 
-extern "C" {
-#include "libavformat/avformat.h"
-#include "libavcodec/avcodec.h"
-#include "libswscale/swscale.h"
-}
+#include <stdio.h>
 
 int main(int argc, const char * argv[]) {
     SDL_Event event;
