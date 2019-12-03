@@ -5,3 +5,10 @@ ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libavdevice.a
 ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libavfilter.a
 ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libswresample.a
 ffMpeg_Tutorial/ffMpeg_Tutorial/lib/libswscale.a
+Test/tags
+Test/bin/main1.out
+Test/bin/main2.out
+Test/bin/main3.out
+Test/obj/main1.o
+Test/obj/main2.o
+Test/obj/main3.o

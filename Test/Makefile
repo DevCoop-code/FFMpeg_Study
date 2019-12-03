@@ -5,7 +5,7 @@ CC:=gcc
 INCLUDES:=$(shell pkg-config --cflags libavformat libavcodec libswresample libswscale libavutil sdl2)
 CFLAGS:=-Wall -ggdb
 LDFLAGS:=$(shell pkg-config --libs libavformat libavcodec libswresample libswscale libavutil sdl2) -lm
-EXE:=main1.out main2.out
+EXE:=main1.out main2.out main3.out
 
 #
 # This is here to prevent Make from deleting secondary files.
