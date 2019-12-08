@@ -14,7 +14,6 @@
 
 #include <stdio.h>
 #include <assert.h>
-
 #define SDL_AUDIO_BUFFER_SIZE 1024
 #define MAX_AUDIO_FRAME_SIZE 192000
 
@@ -45,7 +44,7 @@ int packet_queue_put(PacketQueue *q, AVPacket *pkt)
         return -1;
     }
     
-    pkt1 = (AVPacketList*)av_malloc(sizeof(AVPacketList));
+    pkt1 = av_malloc(sizeof(AVPacketList));
     if(!pkt1)
         return -1;
     pkt1->pkt = *pkt;
@@ -74,7 +73,7 @@ static int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block)
     
     SDL_LockMutex(q->mutex);
     
-    while(1)
+    for(;;)
     {
         if(quit)
         {
@@ -90,7 +89,7 @@ static int packet_queue_get(PacketQueue *q, AVPacket *pkt, int block)
                 q->last_pkt = NULL;
             q->nb_packets--;
             q->size -= pkt1->pkt.size;
-            *pkt=pkt1->pkt;
+            *pkt = pkt1->pkt;
             av_free(pkt1);
             ret = 1;
             break;
@@ -118,7 +117,7 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
     
     int len1, data_size = 0;
     
-    while (1)
+    for(;;)
     {
         while (audio_pkt_size > 0)
         {
@@ -139,7 +138,7 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
                                                        frame.nb_samples,
                                                        aCodecCtx->sample_fmt,
                                                        1);
-                assert(data_size <= buf_size);
+                //assert(data_size <= buf_size);
                 memcpy(audio_buf, frame.data[0], data_size);
             }
             if(data_size <= 0)
@@ -150,17 +149,34 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
             //We have data, return it and come back for more later
             return data_size;
         }
-        if(pkt.data)
-            av_free_packet(&pkt);
+
+        fprintf(stderr, "hankyo1 \n");
+        // if(pkt.data)
+        // {
+        //     fprintf(stderr, "hankyo3 \n");
+        //     av_free_packet(&pkt);
+        // }
         
         if(quit)
+        {
+            fprintf(stderr, "hankyo2 \n");
             return -1;
+        }
+
+        fprintf(stderr, "hankyo4 \n");
         
         if(packet_queue_get(&audioq, &pkt, 1) < 0)
+        {
+            fprintf(stderr, "hankyo3 \n");
             return -1;
+        }
         
+        fprintf(stderr, "hankyo5 \n");
+
         audio_pkt_data = pkt.data;
         audio_pkt_size = pkt.size;
+
+        fprintf(stderr, "audio packet size: %d \n", audio_pkt_size);
     }
 }
 
@@ -172,6 +188,8 @@ int audio_decode_frame(AVCodecContext *aCodecCtx, uint8_t *audio_buf, int buf_si
  */
 void audio_callback(void *userdata, Uint8 *stream, int len)
 {
+    fprintf(stderr, "audio callback called \n");
+
     AVCodecContext *aCodecCtx = (AVCodecContext*)userdata;
     int len1, audio_size;
     
@@ -179,11 +197,15 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
     static unsigned int audio_buf_size = 0;
     static unsigned int audio_buf_index = 0;
     
+    // fprintf(stderr, "audio size of buffer : %d \n", len);
     while (len > 0)
     {
+        // fprintf(stderr, "audio buf index(%d), audio buf size(%d) \n", audio_buf_index, audio_buf_size);
         if(audio_buf_index >= audio_buf_size)
         {
             audio_size = audio_decode_frame(aCodecCtx, audio_buf, sizeof(audio_buf));
+            
+            // fprintf(stderr, "audio size : %d \n", audio_size);
             
             if(audio_size < 0)
             {
@@ -198,18 +220,38 @@ void audio_callback(void *userdata, Uint8 *stream, int len)
             audio_buf_index = 0;
         }
         len1 = audio_buf_size - audio_buf_index;
+        
+        if(len1 > len)
+            len1 = len;
+        memcpy(stream, (uint8_t *)audio_buf + audio_buf_index, len1);
+        len -= len1;
+        stream += len1;
+        audio_buf_index += len1;
     }
-    len1 = audio_buf_size - audio_buf_index;
-    if(len1 > len)
-        len1 = len;
-    memcpy(stream, (uint8_t *)audio_buf + audio_buf_index, len1);
-    len -= len1;
-    stream += len1;
-    audio_buf_index += len1;
 }
 
 int main(int argc, const char * argv[]) {
+    AVFormatContext *pFormatCtx = NULL;
+    int videoStream, audioStream;
+
+    AVCodecContext *pCodecCtxOrig = NULL;
+    AVCodecContext *pCodecCtx = NULL;
+    AVCodecContext *aCodecCtxOrig = NULL;
+    AVCodecContext *aCodecCtx = NULL;
+    
+    SDL_AudioSpec wanted_spec, spec;
+    
+    AVCodec *pCodec = NULL;
+    AVCodec *aCodec = NULL;
+    
+    /*
+     Storing the Data
+     */
+    AVFrame *pFrame = NULL;
+    AVFrame *pFrameRGB = NULL;
+    
     SDL_Event event;
+
     //Registers all available file formats and codecs with the library
     av_register_all();
 
@@ -220,9 +262,6 @@ int main(int argc, const char * argv[]) {
         return -1;
     }
     
-    //Open the file
-    AVFormatContext *pFormatCtx = NULL;
-    
     /*
      Read File Header
      */
@@ -230,36 +269,6 @@ int main(int argc, const char * argv[]) {
     if(avformat_open_input(&pFormatCtx, argv[1], NULL, NULL) != 0)
     {
         return -1;  //Couldn't open file
-    }
-
-    AVCodecContext *pCodecCtxOrig = NULL;
-    AVCodecContext *pCodecCtx = NULL;
-    AVCodecContext *aCodecCtxOrig = NULL;
-    AVCodecContext *aCodecCtx = NULL;
-
-    /*
-     Contained within the codec context is all the information we need to set up our audio
-     
-     freq: Sample Rate
-     format: SDL what format we will be giving it
-        ex] S16SYS : S-> signed / 16-> each sample is 16 bits / SYS-> endian-order
-     channels: Number of audio channels
-     silence: value that indicated silence
-     samples: size of the audio buffer
-     */
-    SDL_AudioSpec wanted_spec, spec;
-    wanted_spec.freq = aCodecCtx->sample_rate;
-    wanted_spec.format = AUDIO_S16SYS;
-    wanted_spec.channels = aCodecCtx->channels;
-    wanted_spec.silence = 0;
-    wanted_spec.samples = SDL_AUDIO_BUFFER_SIZE;
-    wanted_spec.callback = audio_callback;
-    wanted_spec.userdata = aCodecCtx;
-    
-    if(SDL_OpenAudio(&wanted_spec, &spec) < 0)
-    {
-        fprintf(stderr, "SDL OpenAudio: %s \n", SDL_GetError());
-        return -1;
     }
     
     /*
@@ -278,10 +287,10 @@ int main(int argc, const char * argv[]) {
     
     //pFormatCtx->streams :Array of pointters
     //pFormatCtx->nb_streams :Number of elements in AVFormatContext.streams
-    int videoStream = -1;
-    int audioStream = -1;
     
     //Find the first video stream
+    videoStream = -1 ;
+    audioStream = -1;
     for(int i = 0; i < pFormatCtx->nb_streams; i++)
     {
         if(pFormatCtx->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO && videoStream < 0)
@@ -297,46 +306,98 @@ int main(int argc, const char * argv[]) {
         return -1;
     if(audioStream == -1)
         return -1;
-    
+
     //Get a pointer to the codec context for the video stream
-    pCodecCtxOrig = pFormatCtx->streams[videoStream]->codec;
     aCodecCtxOrig = pFormatCtx->streams[audioStream]->codec;
     
-    AVCodec *pCodec = NULL;
-    AVCodec *aCodec = NULL;
     //Find the decoder for the video stream
-    pCodec = avcodec_find_decoder(pCodecCtxOrig->codec_id);
     aCodec = avcodec_find_decoder(aCodecCtxOrig->codec_id);
-    if(pCodec == NULL || aCodec == NULL)
+
+    if(aCodec == NULL)
     {
-        fprintf(stderr, "Unsupported codec! \n");
+        fprintf(stderr, "Unsupported Audio codec! \n");
         return -1;  //Codec not found
     }
     //Copy context
-    pCodecCtx = avcodec_alloc_context3(pCodec);
     aCodecCtx = avcodec_alloc_context3(aCodec);
     //Must not use the AVCodecContext from the video stream directly!
-    if( (avcodec_copy_context(pCodecCtx, pCodecCtxOrig) != 0) || (avcodec_copy_context(aCodecCtx, aCodecCtxOrig) != 0) )
+    if((avcodec_copy_context(aCodecCtx, aCodecCtxOrig) != 0))
     {
-        fprintf(stderr, "Couldn't copy codec context \n");
+        fprintf(stderr, "Couldn't copy Audio codec context \n");
         return -1;  //Error copying codec context
     }
+    /*
+     Contained within the codec context is all the information we need to set up our audio
+     
+     freq: Sample Rate
+     format: SDL what format we will be giving it
+        ex] S16SYS : S-> signed / 16-> each sample is 16 bits / SYS-> endian-order
+     channels: Number of audio channels
+     silence: value that indicated silence
+     samples: size of the audio buffer
+     */
+    wanted_spec.freq = aCodecCtx->sample_rate;
+    wanted_spec.format = AUDIO_S16SYS;
+    wanted_spec.channels = aCodecCtx->channels;
+    wanted_spec.silence = 0;
+    wanted_spec.samples = SDL_AUDIO_BUFFER_SIZE;
+    wanted_spec.callback = audio_callback;
+    wanted_spec.userdata = aCodecCtx;
+    
+    if(SDL_OpenAudio(&wanted_spec, &spec) < 0)
+    {
+        fprintf(stderr, "SDL OpenAudio: %s \n", SDL_GetError());
+        return -1;
+    }
+    
     //Open codec
-    if( (avcodec_open2(pCodecCtx, pCodec, NULL) < 0) || (avcodec_open2(aCodecCtx, aCodec, NULL) < 0) )
+    if((avcodec_open2(aCodecCtx, aCodec, NULL) < 0))
+    {
+        fprintf(stderr, "Could not open audio codec \n");
         return -1;  //Could not open codec
+    }
     
     packet_queue_init(&audioq);
     SDL_PauseAudio(0);  //To starts the audio device
     
-    /*
-     Storing the Data
-     */
-    AVFrame *pFrame = NULL;
-    AVFrame *pFrameRGB = NULL;
-    
+    //Get a pointer to the codec context for the video stream
+    pCodecCtxOrig = pFormatCtx->streams[videoStream]->codec;
+
+    //Find the decoder for the video stream
+    pCodec = avcodec_find_decoder(pCodecCtxOrig->codec_id);
+    if(pCodec == NULL)
+    {
+        fprintf(stderr, "Unsupported video codec! \n");
+        return -1;  //Codec not found
+    }
+
+    //Copy context
+    pCodecCtx = avcodec_alloc_context3(pCodec);
+    //Must not use the AVCodecContext from the video stream directly!
+    if( (avcodec_copy_context(pCodecCtx, pCodecCtxOrig) != 0) )
+    {
+        fprintf(stderr, "Couldn't copy video codec context \n");
+        return -1;  //Error copying codec context
+    }
+
+    //Open codec
+    if((avcodec_open2(pCodecCtx, pCodec, NULL) < 0))
+    {
+        fprintf(stderr, "Could not open video codec \n");
+        return -1;  //Error copying codec context
+    }
+
+
     //Allocate video frame
     pFrame = av_frame_alloc();
     
+    //Make a screen to put video
+    // #ifndef __DARWIN__
+    //     screen = SDL_SetVideoMode(pCodecCtx->width, pCodecCtx->height, 0, 0);
+    // #else
+    //     screen = SDL_SetVideoMode(pCodecCtx->width, pCodecCtx->height, 24, 0);
+    // #endif
+
     //Set up a screen with the given width * height
     SDL_Window *screen;
     screen = SDL_CreateWindow("Video Player", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, pCodecCtx->width, pCodecCtx->height, SDL_WINDOW_OPENGL);
@@ -445,17 +506,15 @@ int main(int argc, const char * argv[]) {
                 
                 av_free_packet(&packet);
             }
-            else if(packet.stream_index == audioStream)
-            {
-                packet_queue_put(&audioq, &packet);
-            }
-            else
-            {
-                av_free_packet(&packet);
-            }
         }
-        //Free the packet that was allocated by av_read_frame
-        av_free_packet(&packet);
+        else if(packet.stream_index == audioStream)
+        {
+            packet_queue_put(&audioq, &packet);
+        }
+        else
+        {
+            av_free_packet(&packet);
+        }
         
         SDL_PollEvent(&event);
         switch (event.type) {
