@@ -44,7 +44,8 @@ int main(int args, char* argv[]) {
             printf("-----Audio info-----\n");
             printf("codec id : %d\n", avCodecContext->codec_id);
             printf("bitrate : %d\n", avCodecContext->bit_rate);
-            printf("width : %d / height : %d\n", avCodecContext->width, avCodecContext->height);
+            printf("sample_rate : %d\n", avCodecContext->sample_rate);
+            printf("number of channels : %d\n", avCodecContext->channels);
         }
     }
 
