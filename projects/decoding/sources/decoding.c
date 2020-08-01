@@ -43,6 +43,7 @@ static int open_input(const char* filename) {
         return -2;
     }
 
+    // Find Video, Audio Index
     for(index = 0; index < inputFile.fmt_ctx->nb_streams; index++) {
         AVCodecContext *codec_ctx = inputFile.fmt_ctx->streams[index]->codec;
         if (codec_ctx->codec_type == AVMEDIA_TYPE_VIDEO && inputFile.v_index < 0) {
@@ -137,7 +138,7 @@ int main(int argc, char* argv[]) {
 
         av_packet_rescale_ts(&pkt, avStream->time_base, codec_ctx->time_base);
 
-        ret = decode_packet(codec_ctx, *pkt, &decoded_frame, &got_frame);
+        ret = decode_packet(codec_ctx, &pkt, &decoded_frame, &got_frame);
         if (ret >= 0 && got_frame) {
             printf("------------\n");
             if (codec_ctx->codec_type == AVMEDIA_TYPE_VIDEO) {
